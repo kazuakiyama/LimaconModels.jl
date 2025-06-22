@@ -76,6 +76,13 @@ prob = VIDAProblem(
 using OptimizationBBO
 xopt, opt_temp, divmin = vida(prob, BBO_adaptive_de_rand_1_bin(); maxiters=50_000)
 
+@info "Fitting Results (left: groundtruth, right: fitted values)"
+@info "λ1: $(rad2μas(truth.λ1)) μas, $(rad2μas(xopt.λ1)) μas"
+@info "λ2: $(truth.λ2), $(xopt.λ2)"
+@info "PA: $(rad2deg(truth.PA)), $(rad2deg(xopt.PA))"
+@info "σinner: $(rad2μas(truth.σinner)) μas, $(rad2μas(xopt.σinner)) μas"
+@info "σouter: $(rad2μas(truth.σouter)) μas, $(rad2μas(xopt.σouter)) μas"
+
 #plot the results
 fig = triptic(imgt, opt_temp)
 save("example_vida_fitted.png", fig)
