@@ -13,6 +13,7 @@ import VLBISkyModels: AbstractImageTemplate,
 
 # Define the radial profile of the curve
 abstract type AbstractPolarCurve end
+abstract type AbstractPolar <: AbstractRadial end
 
 """
     $(TYPEDEF)
@@ -34,6 +35,8 @@ end
     return 1 + λ * cos(ϕ)
 end
 
+radialextent(m::LimaconCurve) = 1 + m.λ
+
 
 """
     $(TYPEDEF)
@@ -41,21 +44,24 @@ end
 A flexible limacon template that forms a limacon by taking the product of
 a radial and azimuthal brightness profile.
 
-A list of radial profiles is given by `subtypes(AbstractRadial)`
+A list of radial profiles for polar templates is given by `subtypes(AbstractPolar)`
 
 A list of azimuthal profiles is given by `subtypes(AbstractAzimuthal)`
+
+A list of polar profiles is given by `subtypes(AbstractPolarCurve)`
 
 ## Examples
 ```julia-repl
 julia> rad = RadialGaussian(0.1)
+julia> pol = LimaconCurve(0.4)
 julia> azi = AzimuthalUniform()
-julia> limacon = modify(LimaconTemplate(rad, azi), Stretch(10.0), Shift(1.0, 2.0))
+julia> limacon = modify(PolarTemplate(rad, azi, pol), Stretch(10.0), Shift(1.0, 2.0))
 ```
 
 ## Fields
 $(FIELDS)
 """
-struct PolarTemplate{R<:AbstractRadial,A<:AbstractAzimuthal,P<:AbstractPolarCurve} <: AbstractImageTemplate
+struct PolarTemplate{R<:AbstractPolar,A<:AbstractAzimuthal,P<:AbstractPolarCurve} <: AbstractImageTemplate
     """
     Radial profile of the limacon
     """
@@ -86,6 +92,8 @@ end
     return fr * fϕ
 end
 
+radialextent(d::PolarTemplate) = radialextent(d.radial) + radialextend(d.polarcurve)
+
 
 """
     PolarGaussian(σ)
@@ -93,18 +101,19 @@ end
 Create a Gaussian profile with a standard deviation `σ`.
 
 ## Notes
-This is usually couple with a azimuthal profile to create a general ring template
+This is usually couple with a azimuthal profile to create a general polar template
 
 ```julia-repl
 julia> rad = PolarGaussian(0.1)
+julia> pol = LimaconCurve(0.4)
 julia> azi = AzimuthalUniform()
-julia> t = RingTemplate(rad, azi)
+julia> t = PolarTemplate(rad, azi, pol)
 ```
 
 ## Arguments
   - `σ`: The standard deviation for the Gaussian ring.
 """
-struct PolarGaussian{T} <: AbstractRadial
+struct PolarGaussian{T} <: AbstractPolar
     σ::T
 end
 
@@ -115,7 +124,7 @@ end
     return exp(-(r - rϕ)^2 / (2 * σ^2))
 end
 
-radialextent(d::PolarGaussian) = 2 + 3 * d.σ
+radialextent(d::PolarGaussian) = 3 * d.σ
 
 
 """
@@ -124,12 +133,13 @@ radialextent(d::PolarGaussian) = 2 + 3 * d.σ
 Create an asymmetric Gaussian profile with two different standard deviations inside and outside of the peak.
 
 ## Notes
-This is usually couple with a azimuthal profile to create a general ring template
+This is usually couple with a azimuthal profile to create a general polar template
 
 ```julia-repl
-julia> rad = RadialGaussian(0.1)
+julia> rad = PolarDblGaussian(0.1, 0.2)
+julia> pol = LimaconCurve(0.4)
 julia> azi = AzimuthalUniform()
-julia> t = RingTemplate(rad, azi)
+julia> t = PolarTemplate(rad, azi, pol)
 ```
 
 ## Arguments
@@ -137,7 +147,7 @@ julia> t = RingTemplate(rad, azi)
   - `σouter`: The standard deviation for the Gaussian ring for r > P(ϕ)
 
 """
-struct PolarDblGaussian{T} <: AbstractRadial
+struct PolarDblGaussian{T} <: AbstractPolar
     σinner::T
     σouter::T
 end
@@ -153,7 +163,7 @@ end
     end
 end
 
-radialextent(d::PolarDblGaussian) = 2 + 3 * d.σouter
+radialextent(d::PolarDblGaussian) = 3 * d.σouter
 
 
 """
@@ -183,7 +193,6 @@ PolarTemplate(
     LimaconCurve(λ)
 )
 
-
 """
     $(SIGNATURES)
 
@@ -197,6 +206,7 @@ the hood. To create this function your self do
 modify(
     GaussianLimacon(λ2, σ / λ1),
     Stretch(λ1),
+    Rotate(ϕ),
     Shift(x0, y0)
 )
 ```
